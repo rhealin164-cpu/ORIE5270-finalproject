@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """
-fetch_weather_data.py — pull hourly or daily weather from Open-Meteo Historical Archive for one lat/lon.
+fetch_weather_forecasting_data.py — pull hourly or daily archived forecast weather (Open-Meteo Historical Forecast API) for one lat/lon.
 
 Hourly mode: kinda matches the cpportal job/openmeteo style (hour_et in your TZ, short cols TEMP, PRECIP, …).
 Daily mode: Open-Meteo daily= vars, one row per local day, date_et is the local midnight anchor.
 
-Note: the reanalysis grid might snap your point a bit — check grid_latitude / grid_longitude in the CSV.
+Each exported row includes column `forecasting` = open_meteo_historical_forecasting.
 
-API: https://archive-api.open-meteo.com/v1/archive
-Docs: https://open-meteo.com/en/docs/historical-weather-api
+Note: the model grid may snap your point — check grid_latitude / grid_longitude in the CSV.
+Coverage is roughly 2022+ (see Open-Meteo docs); this is archived forecast output, not long-run reanalysis.
+
+API: https://historical-forecast-api.open-meteo.com/v1/forecast
+Docs: https://open-meteo.com/en/docs/historical-forecast-api
 
 You can also set env vars (CLI wins): OPEN_METEO_FREQ, OPEN_METEO_LAT, OPEN_METEO_LON,
 OPEN_METEO_START, OPEN_METEO_END, OPEN_METEO_TZ, OPEN_METEO_OUT, OPEN_METEO_SLEEP_SEC
@@ -33,7 +36,9 @@ import requests
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_OUTPUT_DIR = PROJECT_DIR / "data" / "raw"
 
-ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
+FORECASTING_TAG = "open_meteo_historical_forecasting"
+
+HISTORICAL_FORECAST_URL = "https://historical-forecast-api.open-meteo.com/v1/forecast"
 HOURLY_VARIABLES = [
     "temperature_2m",
     "relative_humidity_2m",
@@ -94,7 +99,7 @@ def _coerce_float(x: Any) -> float:
     return f
 
 
-def fetch_archive(
+def fetch_historical_forecast(
     session: requests.Session,
     lat: float,
     lon: float,
@@ -120,7 +125,7 @@ def fetch_archive(
         q["hourly"] = ",".join(HOURLY_VARIABLES)
     else:
         q["daily"] = ",".join(DAILY_VARIABLES)
-    r = session.get(ARCHIVE_URL, params=q, timeout=120)
+    r = session.get(HISTORICAL_FORECAST_URL, params=q, timeout=120)
     r.raise_for_status()
     data = r.json()
     if isinstance(data, list):
@@ -181,6 +186,7 @@ def build_hourly_dataframe(response: dict[str, Any], location_label: str, tz: st
     df["BARPR"] = df["pressure_msl"].round(2)
     df["SRAD"] = df["shortwave_radiation"].round(2)
     df["CLOUD"] = df["cloud_cover"].round(2)
+    df["forecasting"] = FORECASTING_TAG
     return df
 
 
@@ -205,12 +211,13 @@ def build_daily_dataframe(response: dict[str, Any], location_label: str, tz: str
     dtp = pd.to_datetime(df["date_local"], errors="coerce")
     dtp = dtp.dt.tz_localize(zone) if dtp.dt.tz is None else dtp.dt.tz_convert(zone)
     df["date_et"] = dtp.dt.normalize()
+    df["forecasting"] = FORECASTING_TAG
     return df
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Fetch Open-Meteo historical archive weather for one AOI (point) to CSV."
+        description="Fetch Open-Meteo historical forecasting archive weather for one AOI (point) to CSV."
     )
     parser.add_argument("--lat", type=float, default=None, help="WGS84 latitude")
     parser.add_argument("--lon", type=float, default=None, help="WGS84 longitude")
@@ -263,12 +270,12 @@ def main() -> int:
         print("ERROR: --freq / OPEN_METEO_FREQ must be hourly or daily", file=sys.stderr)
         return 1
 
-    default_out = DEFAULT_OUTPUT_DIR / "weather_hourly.csv"
+    default_out = DEFAULT_OUTPUT_DIR / "hourly_weather_forecasting.csv"
     if use_tompkins:
         default_out = (
-            DEFAULT_OUTPUT_DIR / "daily_weather.csv"
+            DEFAULT_OUTPUT_DIR / "daily_weather_forecasting.csv"
             if frequency == "daily"
-            else DEFAULT_OUTPUT_DIR / "weather_hourly.csv"
+            else DEFAULT_OUTPUT_DIR / "hourly_weather_forecasting.csv"
         )
     if use_tompkins and args.label == "openmeteo_point":
         location_label = "tompkins_county_ny"
@@ -311,7 +318,7 @@ def main() -> int:
     for i, (w0, w1) in enumerate(windows):
         if i and sleep_sec > 0:
             time.sleep(sleep_sec)
-        payload = fetch_archive(session, lat, lon, w0, w1, tz, mode=frequency)
+        payload = fetch_historical_forecast(session, lat, lon, w0, w1, tz, mode=frequency)
         if frequency == "hourly":
             part = build_hourly_dataframe(payload, location_label, tz)
         else:

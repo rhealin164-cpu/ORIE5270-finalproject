@@ -16,6 +16,9 @@ env/
 # OS
 .DS_Store
 
+# Cursor / IDE debug logs
+.cursor/
+
 # Jupyter
 .ipynb_checkpoints/
 

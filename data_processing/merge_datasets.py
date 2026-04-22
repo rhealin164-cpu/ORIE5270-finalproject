@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Merge county-level daily AQI (US-wide CSVs) with weather from fetch_weather_data.py.
+Merge county-level daily AQI (US-wide CSVs) with weather from fetch_weather_forecasting_data.py.
 
 - AQI: by default we load daily_aqi_by_county_2024.csv and 2025 from data/raw if they exist,
   pull Tompkins NY rows, and concat. Pass --aqi one or more times for other files.
@@ -134,8 +134,8 @@ def main() -> int:
     parser.add_argument(
         "--weather",
         type=Path,
-        default=DATA_DIR / "raw" / "daily_weather.csv",
-        help="CSV from fetch_weather_data.py",
+        default=DATA_DIR / "raw" / "daily_weather_forecasting.csv",
+        help="CSV from fetch_weather_forecasting_data.py",
     )
     parser.add_argument(
         "--out",

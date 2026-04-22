@@ -50,6 +50,7 @@ _HOURLY_WEATHER_NUMERIC = (
 _AQI_NUMERIC = ("AQI", "Number of Sites Reporting")
 _STRING_COLS = (
     "location_label",
+    "forecasting",
     "State Name",
     "county Name",
     "Category",
