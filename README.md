@@ -1,6 +1,6 @@
 # Ozone AQI Prediction in Tompkins County, NY
 
-This repository contains the final project for ORIE5270 (Machine Learning), focusing on predicting ozone Air Quality Index (AQI) in Tompkins County, NY. The project leverages weather data and EPA AQI data to train robust machine learning models that forecast ozone levels.
+This repository contains the final project for ORIE5270 (Machine Learning), focusing on predicting ozone Air Quality Index (AQI) in Tompkins County, NY. 
 
 ---
 
