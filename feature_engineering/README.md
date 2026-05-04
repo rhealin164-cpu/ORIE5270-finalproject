@@ -1,67 +1,52 @@
-# Feature Engineering (Tompkins County, NY)
+# Feature engineering (Tompkins County, NY)
 
-Feature engineering module that takes the cleaned modeling table and
-produces a ready-to-use feature matrix for AQI prediction.
+Turn **`data_processing/data/processed/modeling_table.csv`** into a numeric feature matrix + **`AQI`** target. Main code: **`features.py`**; typical output: **`features_table.csv`** (features + `AQI`, metadata columns dropped).
 
-## Folder layout
+## Layout
 
 ```
 feature_engineering/
-├── README.md             # this file
-├── features.py           # feature engineering pipeline
-└── features_table.csv    # ready-to-use table (35 features + AQI)
+├── features.py
+├── features_table.csv   # generated / versioned snapshot
+└── README.md
 ```
 
 ## Requirements
 
-- Python 3.10+
-- pandas
-- numpy
-
-```
-pip install pandas numpy
-```
+Python **3.10+**, `pandas`, `numpy` (project root `requirements.txt` installs everything).
 
 ## Quick start
 
-From the project root:
+From **repo root**:
 
-```
+```bash
 python feature_engineering/features.py
 ```
 
-This will generate `features_table.csv` under `feature_engineering/`.
+Writes/updates `feature_engineering/features_table.csv` (paths inside script assume repo layout).
 
-## Usage
+## Use from Python
 
 ```python
-from feature_engineering.features import build_features, get_X_y, save_features_table
-
-# Option 1: load ready-to-use table directly
 import pandas as pd
-df = pd.read_csv("feature_engineering/features_table.csv")
-X = df.drop(columns=["AQI"])
-y = df["AQI"]
+from feature_engineering.features import build_features, get_X_y
 
-# Option 2: run pipeline from scratch
 raw = pd.read_csv("data_processing/data/processed/modeling_table.csv")
-feature_df = build_features(raw)
-X, y = get_X_y(feature_df)
+X, y = get_X_y(build_features(raw))
+# or load pre-built table: pd.read_csv("feature_engineering/features_table.csv")
 ```
 
-## Engineered / derived features (19 columns)
+## What gets engineered
 
-| Category | Features |
-|----------|----------|
-| Lag | aqi_lag_1, aqi_lag_2, aqi_lag_3, aqi_lag_7 |
-| Rolling | aqi_roll_mean_3, aqi_roll_mean_7, aqi_roll_std_7 |
-| Trend | aqi_diff_1, aqi_diff_7 |
-| Time | month, weekday, season, month_sin, month_cos, weekday_sin, weekday_cos |
-| Weather-derived | temp_range, wind_dir_sin, wind_dir_cos |
+- **AQI history:** lags (1,2,3,7 d), rolling mean/std (causal / shifted), short/long diffs  
+- **Calendar:** month, weekday, season; sin/cos encoding for month & weekday  
+- **Weather:** e.g. `temp_range`, cyclic `wind_dir_sin` / `wind_dir_cos` (raw wind ° dropped in `get_X_y`)  
+- Base weather columns from the modeling table are kept where numeric
 
-## Output: features_table.csv
+See **`features.py`** docstrings for exact column lists and drop rules.
 
-- Shape: 581 rows × 36 columns (35 features + AQI)
-- Non-predictive columns removed (metadata, date, sunrise/sunset, raw wind direction)
-- No missing values (NaN)
-- Target column AQI is placed as the last column
+**Engineered columns & screening:** [docs/features.md](../docs/features.md).
+
+## Output table
+
+`features_table.csv`: one row per day after lag/rolling warmup rows are dropped; **no NaNs** in core engineered columns; **`AQI`** last column for convenience.

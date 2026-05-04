@@ -1,6 +1,4 @@
 import pandas as pd
-from data_processing.merge_datasets import merge_frames
-import pandas as pd
 import pytest
 from pathlib import Path
 

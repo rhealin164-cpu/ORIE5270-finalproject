@@ -1,6 +1,6 @@
 # Ozone AQI Prediction in Tompkins County, NY
 
-This repository contains the final project for ORIE5270 (Machine Learning), focusing on predicting ozone Air Quality Index (AQI) in Tompkins County, NY. 
+This repository contains the final project for ORIE5270 (Machine Learning), focusing on predicting ozone Air Quality Index (AQI) in Tompkins County, NY.
 
 ---
 
@@ -15,8 +15,10 @@ We utilize Random Forest and XGBoost regression models, with a well-defined data
 ## Repository Structure
 
 ```
+orie5270_ozone/               # installable top-level namespace (version metadata)
+pyproject.toml                # package metadata & pytest settings
 data_processing/
-├── README.md                 # this file
+├── README.md                 # pipeline documentation for this folder
 ├── fetch_weather_forecasting_data.py  # download forecasting archive → CSV
 ├── merge_datasets.py         # merge AQI + weather → modeling table (+ extras)
 ├── clean_data.py             # optional: re-clean an existing modeling CSV
@@ -35,20 +37,28 @@ feature_engineering/
   ├── features_table.csv
   ├── README.md
   └── features.py
+docs/
+  ├── data_dictionary.md    # modeling_table & raw file columns
+  └── features.md           # engineered features & screening
 model_training/
+  ├── README.md
   └── model.py
 test/
+  ├── conftest.py
   ├── test_features.py
   ├── test_merge.py
-  └── test_model.py
+  ├── test_model.py
+  └── test_package.py
 README.md
-requirements.txt
+requirements.txt              # pinned-style deps + editable install (-e .)
 ```
 
+- **orie5270_ozone/**: Installable project namespace (version metadata).
 - **data_processing/**: Scripts for downloading, cleaning, and merging weather and AQI data.
 - **feature_engineering/**: Feature generation and transformation utilities.
-- **model_training/**: Model training and evaluation code (Random Forest, XGBoost).
+- **model_training/**: Model training and evaluation code (Random Forest, XGBoost); see [model_training/README.md](model_training/README.md).
 - **test/**: Unit tests for data processing, feature engineering, and model functionality.
+- **docs/**: Detailed documentation ([data dictionary](docs/data_dictionary.md), [features](docs/features.md)).
 
 ---
 
@@ -65,13 +75,15 @@ Processed files (`modeling_table.csv`, `daily_air_quality.csv`, `sample_…`) ar
 
 (Please refer to code comments in `fetch_weather_forecasting_data.py` for exact endpoints and usage.)
 
+More column and feature detail: **[Data dictionary](docs/data_dictionary.md)** · **[Features](docs/features.md)**.
+
 ---
 
 ## Installation
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/rhealin164-cpu/ORIE5270-finalproject-ozone-aqi-prediction.git
+   git clone https://github.com/rhealin164-cpu/ORIE5270-finalproject.git
    cd ORIE5270-finalproject
    ```
 2. Create and activate a Python virtual environment (optional but recommended):
@@ -87,10 +99,34 @@ Processed files (`modeling_table.csv`, `daily_air_quality.csv`, `sample_…`) ar
    venv\Scripts\activate
    ```
 
-3. Install dependencies:
+3. Install dependencies **and** this repo as an editable package (run in the repo root next to `pyproject.toml`):
    ```bash
    pip install -r requirements.txt
    ```
+   The file lists runtime + test libraries explicitly (aligned with `pyproject.toml`) and ends with `-e .` so imports like `feature_engineering` work from any working directory.
+
+   Equivalent (dependencies only declared in `pyproject.toml`):
+   ```bash
+   pip install -e ".[dev]"
+   ```
+
+### Import and run from Python
+
+After installation you can **import** modules from any working directory:
+
+```python
+import orie5270_ozone  # package metadata; __version__ on the distribution root
+
+from feature_engineering.features import build_features, get_X_y, save_features_table
+from model_training.model import run_model_pipeline, train_random_forest, xgboost_available
+from data_processing.merge_datasets import merge_frames
+
+# Example: train/evaluate on the saved features table (plots optional)
+results, rf_imp, xgb_imp = run_model_pipeline(show_plots=False)
+print(results)
+```
+
+**macOS note:** XGBoost needs the OpenMP runtime. If import fails, install with Homebrew (`brew install libomp`). When XGBoost cannot load, `run_model_pipeline` still trains **Random Forest** only.
 
 ---
 
@@ -119,20 +155,21 @@ Intermediate and output files will be written to a local `data/` folder (created
 
 ## Testing
 
-Run unit tests using `pytest`:
+From the repository root (after `pip install -r requirements.txt`):
 
 ```bash
-pytest --cov=. --cov-report=term-missing
+pytest --cov=data_processing --cov=feature_engineering --cov=model_training --cov=orie5270_ozone --cov-report=term-missing
 ```
 
-**Test Coverage**:  
-- Total tests: 28
-- Total code coverage: **84%**
+**Test Coverage** (packages under test; API fetch / `clean_data` CLI omitted — see `[tool.coverage.run]` in `pyproject.toml`):
+- Total tests: **29** (one XGBoost test is skipped when the native library cannot load, e.g. macOS without `libomp`).
+- Combined coverage (`data_processing`, `feature_engineering`, `model_training`, `orie5270_ozone`): **~82%**
 
-Core modules coverage:
-- data_processing.merge_datasets: 90%
-- feature_engineering.features: 82%
-- model_training.model: 94%
+Per-module (approximate):
+- `data_processing.merge_datasets`: ~90%
+- `feature_engineering.features`: ~82%
+- `model_training.model`: ~73% (XGBoost branches depend on a working native install)
+- `orie5270_ozone`: 100%
 
 
 > **Note:** API fetching modules are not heavily unit tested due to their reliance on external APIs and variable network conditions.

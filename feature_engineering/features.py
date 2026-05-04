@@ -19,6 +19,8 @@ Columns used from raw data:
 """
 
 import os
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -328,11 +330,9 @@ def save_features_table(
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    _here = os.path.dirname(os.path.abspath(__file__))
-    _input_csv = os.path.join(
-        _here, "data_processing", "data", "processed", "modeling_table.csv"
-    )
-    _features_csv = os.path.join(_here, "feature_engineering", "features_table.csv")
+    _repo = Path(__file__).resolve().parents[1]
+    _input_csv = _repo / "data_processing" / "data" / "processed" / "modeling_table.csv"
+    _features_csv = Path(__file__).resolve().parent / "features_table.csv"
 
     raw = pd.read_csv(_input_csv)
 

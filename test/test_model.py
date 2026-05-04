@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib
+import pytest
+
 matplotlib.use("Agg")
 
 from model_training.model import (
@@ -12,6 +14,7 @@ from model_training.model import (
     plot_feature_importance,
     plot_actual_vs_predicted,
     run_model_pipeline,
+    xgboost_available,
 )
 
 
@@ -57,6 +60,10 @@ def test_train_random_forest():
     assert hasattr(model, "predict")
 
 
+@pytest.mark.skipif(
+    not xgboost_available(),
+    reason="XGBoost native library unavailable (e.g. missing libomp on macOS)",
+)
 def test_train_xgboost():
     df = sample_model_df()
     X, y = prepare_features(df)
@@ -118,6 +125,11 @@ def test_run_model_pipeline_without_plots(tmp_path):
     )
 
     assert isinstance(results, pd.DataFrame)
-    assert set(results["Model"]) == {"Random Forest", "XGBoost"}
+    assert "Random Forest" in set(results["Model"])
+    if xgboost_available():
+        assert "XGBoost" in set(results["Model"])
+        assert len(results) == 2
+    else:
+        assert len(results) == 1
     assert rf_importance is None
     assert xgb_importance is None
